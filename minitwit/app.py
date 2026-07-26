@@ -28,7 +28,7 @@ from models import User, Message, Follower, get_db, init_db
 # ─── Configuration ────────────────────────────────────────────────────────────
 PER_PAGE = 30
 SECRET_KEY = os.environ.get('SECRET_KEY', 'development key')
-LATEST_FILE = os.environ.get('LATEST_FILE', '/tmp/latest_processed_sim_action_id.txt')
+LATEST_FILE = os.environ.get('LATEST_FILE', '/data/latest_processed_sim_action_id.txt')
 SIMULATOR_AUTH = "Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh"
 
 # ─── App & Templates ──────────────────────────────────────────────────────────

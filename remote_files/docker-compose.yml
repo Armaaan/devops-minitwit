@@ -4,7 +4,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - minitwit-data:/tmp
+      - minitwit-data:/data
     restart: unless-stopped
 
 volumes:

@@ -5,6 +5,9 @@ RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 WORKDIR /app
 
+# Create data directory for DB and latest file
+RUN mkdir -p /data && chown appuser:appgroup /data
+
 # Copy requirements first for layer caching
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

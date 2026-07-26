@@ -3,9 +3,9 @@ services:
     build:
       context: ./minitwit
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
-      - minitwit-data:/tmp
+      - minitwit-data:/data
     restart: unless-stopped
 
 volumes:
