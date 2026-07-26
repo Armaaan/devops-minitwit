@@ -213,12 +213,39 @@ async def register_get(request: Request):
     return response
 
 
-@app.post('/register', response_class=HTMLResponse)
-async def register_post(request: Request,
-                        username: str = Form(default=''),
-                        email: str = Form(default=''),
-                        password: str = Form(default=''),
-                        password2: str = Form(default='')):
+@app.post('/register')
+async def register_post(request: Request, latest: int = -1):
+    content_type = request.headers.get('content-type', '')
+
+    # Simulator sends JSON
+    if 'application/json' in content_type:
+        update_latest(latest)
+        body = await request.json()
+        db = get_db()
+        error = None
+        if not body.get('username'):
+            error = 'You have to enter a username'
+        elif not body.get('email') or '@' not in body.get('email', ''):
+            error = 'You have to enter a valid email address'
+        elif not body.get('pwd'):
+            error = 'You have to enter a password'
+        elif db.query(User).filter(User.username == body['username']).first() is not None:
+            error = 'The username is already taken'
+        else:
+            db.add(User(username=body['username'], email=body['email'],
+                        pw_hash=generate_password_hash(body['pwd'])))
+            db.commit()
+            db.close()
+            return Response(status_code=204)
+        db.close()
+        return JSONResponse(status_code=400, content={"status": 400, "error_msg": error})
+
+    # Web browser sends form data
+    form = await request.form()
+    username = form.get('username', '')
+    email = form.get('email', '')
+    password = form.get('password', '')
+    password2 = form.get('password2', '')
     session_data = get_session(request)
     db = get_db()
     error = None
