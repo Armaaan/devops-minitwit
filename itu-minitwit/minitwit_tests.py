@@ -58,7 +58,7 @@ class MiniTwitTestCase(unittest.TestCase):
         rv = self.app.post('/add_message', data={'text': text},
                                     follow_redirects=True)
         if text:
-            assert 'Your message was recorded'.encode("utf-8") in rv.data
+            assert 'Your message was recorded'.encode('utf-8') in rv.data
         return rv
 
     # testing functions
@@ -67,28 +67,28 @@ class MiniTwitTestCase(unittest.TestCase):
         """Make sure registering works"""
         rv = self.register('user1', 'default')
         assert 'You were successfully registered ' \
-               'and can login now'.encode("utf-8") in rv.data
+               'and can login now'.encode('utf-8') in rv.data
         rv = self.register('user1', 'default')
-        assert 'The username is already taken'.encode("utf-8") in rv.data
+        assert 'The username is already taken'.encode('utf-8') in rv.data
         rv = self.register('', 'default')
-        assert 'You have to enter a username'.encode("utf-8") in rv.data
+        assert 'You have to enter a username'.encode('utf-8') in rv.data
         rv = self.register('meh', '')
-        assert 'You have to enter a password'.encode("utf-8") in rv.data
+        assert 'You have to enter a password'.encode('utf-8') in rv.data
         rv = self.register('meh', 'x', 'y')
-        assert 'The two passwords do not match'.encode("utf-8") in rv.data
+        assert 'The two passwords do not match'.encode('utf-8') in rv.data
         rv = self.register('meh', 'foo', email='broken')
-        assert 'You have to enter a valid email address'.encode("utf-8") in rv.data
+        assert 'You have to enter a valid email address'.encode('utf-8') in rv.data
 
     def test_login_logout(self):
         """Make sure logging in and logging out works"""
         rv = self.register_and_login('user1', 'default')
-        assert 'You were logged in'.encode("utf-8") in rv.data
+        assert 'You were logged in'.encode('utf-8') in rv.data
         rv = self.logout()
-        assert 'You were logged out'.encode("utf-8") in rv.data
+        assert 'You were logged out'.encode('utf-8') in rv.data
         rv = self.login('user1', 'wrongpassword')
-        assert 'Invalid password'.encode("utf-8") in rv.data
+        assert 'Invalid password'.encode('utf-8') in rv.data
         rv = self.login('user2', 'wrongpassword')
-        assert 'Invalid username'.encode("utf-8") in rv.data
+        assert 'Invalid username'.encode('utf-8') in rv.data
 
     def test_message_recording(self):
         """Check if adding messages works"""
@@ -96,8 +96,8 @@ class MiniTwitTestCase(unittest.TestCase):
         self.add_message('test message 1')
         self.add_message('<test message 2>')
         rv = self.app.get('/')
-        assert 'test message 1'.encode("utf-8") in rv.data
-        assert '&lt;test message 2&gt;'.encode("utf-8") in rv.data
+        assert 'test message 1'.encode('utf-8') in rv.data
+        assert '&lt;test message 2&gt;'.encode('utf-8') in rv.data
 
     def test_timelines(self):
         """Make sure that timelines work"""
@@ -107,37 +107,37 @@ class MiniTwitTestCase(unittest.TestCase):
         self.register_and_login('bar', 'default')
         self.add_message('the message by bar')
         rv = self.app.get('/public')
-        assert 'the message by foo'.encode("utf-8") in rv.data
-        assert 'the message by bar'.encode("utf-8") in rv.data
+        assert 'the message by foo'.encode('utf-8') in rv.data
+        assert 'the message by bar'.encode('utf-8') in rv.data
 
         # bar's timeline should just show bar's message
         rv = self.app.get('/')
-        assert 'the message by foo'.encode("utf-8") not in rv.data
-        assert 'the message by bar'.encode("utf-8") in rv.data
+        assert 'the message by foo'.encode('utf-8') not in rv.data
+        assert 'the message by bar'.encode('utf-8') in rv.data
 
         # now let's follow foo
         rv = self.app.get('/foo/follow', follow_redirects=True)
-        assert 'You are now following &#34;foo&#34;'.encode("utf-8") in rv.data
+        assert 'You are now following &#34;foo&#34;'.encode('utf-8') in rv.data
 
         # we should now see foo's message
         rv = self.app.get('/')
-        assert 'the message by foo'.encode("utf-8") in rv.data
-        assert 'the message by bar'.encode("utf-8") in rv.data
+        assert 'the message by foo'.encode('utf-8') in rv.data
+        assert 'the message by bar'.encode('utf-8') in rv.data
 
         # but on the user's page we only want the user's message
         rv = self.app.get('/bar')
-        assert 'the message by foo'.encode("utf-8") not in rv.data
-        assert 'the message by bar'.encode("utf-8") in rv.data
+        assert 'the message by foo'.encode('utf-8') not in rv.data
+        assert 'the message by bar'.encode('utf-8') in rv.data
         rv = self.app.get('/foo')
-        assert 'the message by foo'.encode("utf-8") in rv.data
-        assert 'the message by bar'.encode("utf-8") not in rv.data
+        assert 'the message by foo'.encode('utf-8') in rv.data
+        assert 'the message by bar'.encode('utf-8') not in rv.data
 
         # now unfollow and check if that worked
         rv = self.app.get('/foo/unfollow', follow_redirects=True)
-        assert 'You are no longer following &#34;foo&#34;'.encode("utf-8") in rv.data
+        assert 'You are no longer following &#34;foo&#34;'.encode('utf-8') in rv.data
         rv = self.app.get('/')
-        assert 'the message by foo'.encode("utf-8") not in rv.data
-        assert 'the message by bar'.encode("utf-8") in rv.data
+        assert 'the message by foo'.encode('utf-8') not in rv.data
+        assert 'the message by bar'.encode('utf-8') in rv.data
 
 
 if __name__ == '__main__':

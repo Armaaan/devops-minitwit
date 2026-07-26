@@ -38,7 +38,7 @@ def connect_db():
 def init_db():
     """Creates the database tables."""
     with closing(connect_db()) as db:
-        with app.open_resource('schema.sql', mode = "r", encoding = "utf-8") as f:
+        with app.open_resource('schema.sql', mode='r') as f:
             db.cursor().executescript(f.read())
         db.commit()
 
@@ -94,10 +94,8 @@ def timeline():
     redirect to the public timeline.  This timeline shows the user's
     messages as well as all the messages of followed users.
     """
-    print("We got a visitor from: " + str(request.remote_addr))
     if not g.user:
         return redirect(url_for('public_timeline'))
-    offset = request.args.get('offset', type=int)
     return render_template('timeline.html', messages=query_db('''
         select message.*, user.* from message, user
         where message.flagged = 0 and message.author_id = user.user_id and (
@@ -248,4 +246,4 @@ app.debug = DEBUG
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0")
+    app.run(host='0.0.0.0')
