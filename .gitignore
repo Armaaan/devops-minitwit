@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*.pyc
+*.db
+.DS_Store
+itu-minitwit/flag_tool
+*.log
+.venv/
+venv/
