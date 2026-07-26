@@ -1,0 +1,19 @@
+services:
+  minitwit:
+    build:
+      context: ./minitwit
+    image: armaaan/devops-minitwit:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - minitwit-data:/tmp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/public')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  minitwit-data:

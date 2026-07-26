@@ -1,0 +1,13 @@
+# Session 02: FastAPI + Jinja2 (Python, not Flask)
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+jinja2==3.1.6
+python-multipart==0.0.20
+itsdangerous==2.2.0
+werkzeug==3.1.7
+
+# Session 05: ORM abstraction layer (no raw SQL)
+sqlalchemy==2.0.51
+
+# Session 06: PostgreSQL support — added when migrating DB
+# psycopg2-binary==2.9.10
