@@ -1,0 +1,11 @@
+services:
+  minitwit:
+    image: armaaan/devops-minitwit:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - minitwit-data:/tmp
+    restart: unless-stopped
+
+volumes:
+  minitwit-data:
