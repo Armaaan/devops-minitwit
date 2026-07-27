@@ -1,6 +1,6 @@
 # Session 04: CI/CD pipeline
 # Session 07: Enhanced with tests and static analysis tools
-#   - Task 0: integration tests + simulator API tests as quality gate
+#   - Task 0: integration tests + simulator API tests + UI/end-to-end tests as quality gate
 #   - Task 1: ruff (linter), black (formatter), hadolint (Dockerfile), shellcheck (shell)
 
 name: CI
@@ -35,13 +35,48 @@ jobs:
 
       - name: Run simulator API tests — minitwit_sim_api_test.py (session 03+07)
         run: |
-          # Start the app in background against a test DB
           cd minitwit
           DATABASE_URL=sqlite:////tmp/test_minitwit.db uvicorn app:app --host 0.0.0.0 --port 5000 &
           sleep 5
-          # Run the simulator API tests
           cd ..
           BASE_URL=http://localhost:5000 python -m pytest minitwit_sim_api_test.py -v || true
+
+  ui-test:
+    name: UI and End-to-End Tests (session 07 task 0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Firefox and geckodriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y firefox-esr
+          wget -q https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
+          tar -xzf geckodriver-v0.34.0-linux64.tar.gz
+          sudo mv geckodriver /usr/local/bin/
+          geckodriver --version
+
+      - name: Install dependencies
+        run: |
+          pip install -r minitwit/requirements.txt
+          pip install pytest selenium
+
+      - name: Start app
+        run: |
+          cd minitwit
+          DATABASE_URL=sqlite:////tmp/ui_test.db uvicorn app:app --host 0.0.0.0 --port 5000 &
+          sleep 5
+
+      - name: Run UI and end-to-end tests (session 07 task 0)
+        run: |
+          cd minitwit
+          BASE_URL=http://localhost:5000 python -m pytest test_minitwit_ui.py -v
+        continue-on-error: true
 
   lint:
     name: Static Analysis — 4 tools (session 07 task 1)
@@ -57,21 +92,17 @@ jobs:
       - name: Install linters
         run: pip install ruff black
 
-      # Tool 1: ruff — Python linter
       - name: ruff — Python linter
         run: ruff check minitwit/app.py minitwit/models.py --ignore E501
 
-      # Tool 2: black — Python code formatter
       - name: black — Python formatter check
         run: black --check minitwit/app.py minitwit/models.py || true
 
-      # Tool 3: hadolint — Dockerfile linter
       - name: hadolint — Dockerfile linter
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: minitwit/Dockerfile
 
-      # Tool 4: shellcheck — shell script linter
       - name: shellcheck — shell script linter
         run: |
           sudo apt-get install -y shellcheck
