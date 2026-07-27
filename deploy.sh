@@ -1,19 +1,36 @@
 #!/bin/bash
 # deploy.sh
-# Deploys ITU-MiniTwit to the server.
+# Deploys ITU-MiniTwit with PostgreSQL + monitoring to the server.
 # Session 05 task 4: idempotent — safe to run multiple times.
 #
 # Usage: ./deploy.sh
-# Run on the server after provision.sh has set up the VM.
+# Run from your local machine — it copies files and deploys remotely.
+#
+# Required environment variables:
+#   SERVER_IP — IP address of the server (default: 46.101.179.118)
 
 set -e
 
-DOCKER_IMAGE="armaaan/devops-minitwit:latest"
+SERVER_IP="${SERVER_IP:-46.101.179.118}"
+SERVER_USER="root"
 APP_DIR="/minitwit"
 
-echo "==> Starting ITU-MiniTwit deployment..."
+echo "==> Deploying ITU-MiniTwit to $SERVER_IP..."
+
+# ── Copy monitoring config files to server ───────────────────────────────────
+echo "==> Copying configuration files..."
+ssh "$SERVER_USER@$SERVER_IP" "mkdir -p $APP_DIR/monitoring/prometheus $APP_DIR/monitoring/grafana/provisioning/datasources $APP_DIR/monitoring/grafana/provisioning/dashboards $APP_DIR/monitoring/grafana/dashboards"
+
+scp remote_files/docker-compose.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/docker-compose.yml"
+scp monitoring/prometheus/prometheus.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/prometheus/prometheus.yml"
+scp monitoring/grafana/provisioning/datasources/datasources.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/grafana/provisioning/datasources/datasources.yml"
+scp monitoring/grafana/provisioning/dashboards/dashboards.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
+scp monitoring/grafana/dashboards/minitwit.json "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/grafana/dashboards/minitwit.json"
 
 # ── Install Docker if not already installed (idempotent) ─────────────────────
+ssh "$SERVER_USER@$SERVER_IP" << 'SSHEOF'
+set -e
+
 if ! command -v docker &> /dev/null; then
     echo "==> Installing Docker..."
     apt-get update -q
@@ -24,7 +41,6 @@ else
     echo "==> Docker already installed: $(docker --version)"
 fi
 
-# ── Install Docker Compose plugin if not already installed (idempotent) ──────
 if ! docker compose version &> /dev/null; then
     echo "==> Installing Docker Compose plugin..."
     mkdir -p /usr/local/lib/docker/cli-plugins
@@ -32,39 +48,20 @@ if ! docker compose version &> /dev/null; then
         -o /usr/local/lib/docker/cli-plugins/docker-compose
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 else
-    echo "==> Docker Compose already installed: $(docker compose version)"
+    echo "==> Docker Compose already installed"
 fi
 
-# ── Create app directory if not exists (idempotent) ──────────────────────────
-mkdir -p "$APP_DIR"
-
-# ── Write docker-compose.yml (idempotent — overwrites with correct version) ──
-cat > "$APP_DIR/docker-compose.yml" << 'COMPOSE'
-services:
-  minitwit:
-    image: armaaan/devops-minitwit:latest
-    ports:
-      - "5000:5000"
-    volumes:
-      - minitwit-data:/data
-    restart: unless-stopped
-
-volumes:
-  minitwit-data:
-COMPOSE
-
-# ── Pull latest image and restart (idempotent) ────────────────────────────────
-echo "==> Pulling latest Docker image..."
-cd "$APP_DIR"
-docker pull "$DOCKER_IMAGE"
-
-echo "==> Starting/restarting application..."
+# ── Pull and deploy ───────────────────────────────────────────────────────────
+echo "==> Pulling latest images and deploying..."
+cd /minitwit
+docker compose pull
 docker compose up -d --remove-orphans
-
-# ── Clean up old images (idempotent) ─────────────────────────────────────────
 docker image prune -f
 
 echo ""
 echo "✓ Deployment complete!"
-echo "  App running at: http://$(curl -s ifconfig.me):5000"
+echo "  App:        http://$(curl -s ifconfig.me):5000"
+echo "  Grafana:    http://$(curl -s ifconfig.me):3000"
+echo "  Prometheus: http://$(curl -s ifconfig.me):9090"
 docker compose ps
+SSHEOF

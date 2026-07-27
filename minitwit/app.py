@@ -24,6 +24,7 @@ from itsdangerous import URLSafeTimedSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import User, Message, Follower, get_db, init_db
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 PER_PAGE = 30
@@ -33,6 +34,10 @@ SIMULATOR_AUTH = "Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh"
 
 # ─── App & Templates ──────────────────────────────────────────────────────────
 app = FastAPI()
+
+# Session 06: Prometheus metrics — exposes /metrics endpoint
+Instrumentator().instrument(app).expose(app)
+
 app.mount('/static', StaticFiles(directory='static'), name='static')
 templates = Jinja2Templates(directory='templates')
 serializer = URLSafeTimedSerializer(SECRET_KEY)

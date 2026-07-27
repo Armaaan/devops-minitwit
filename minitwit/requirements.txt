@@ -9,5 +9,8 @@ werkzeug==3.1.7
 # Session 05: ORM abstraction layer (no raw SQL)
 sqlalchemy==2.0.51
 
-# Session 06: PostgreSQL support — added when migrating DB
-# psycopg2-binary==2.9.10
+# Session 06: PostgreSQL support
+psycopg2-binary==2.9.10
+
+# Session 06: Prometheus metrics
+prometheus-fastapi-instrumentator==7.1.0
