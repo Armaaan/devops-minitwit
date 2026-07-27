@@ -19,17 +19,20 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer
-from models import Follower, Message, User, get_db, init_db
 from prometheus_fastapi_instrumentator import Instrumentator
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from models import Follower, Message, User, get_db, init_db
+
 # ─── Configuration ────────────────────────────────────────────────────────────
 PER_PAGE = 30
-SECRET_KEY = os.environ.get('SECRET_KEY', 'development key')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'change-me-in-production')
 LATEST_FILE = os.environ.get('LATEST_FILE', '/data/latest_processed_sim_action_id.txt')
 SIMULATOR_AUTH = "Basic c2ltdWxhdG9yOnN1cGVyX3NhZmUh"
 
 # ─── App & Templates ──────────────────────────────────────────────────────────
+TIMELINE_TEMPLATE = 'timeline.html'  # avoid duplicating literal
+
 app = FastAPI()
 
 # Session 06: Prometheus metrics — exposes /metrics endpoint
@@ -62,14 +65,15 @@ def get_session(request: Request) -> dict:
     if cookie:
         try:
             return dict(serializer.loads(cookie, max_age=86400 * 7))
-        except (ValueError, Exception):  # noqa: BLE001, S110
+        except Exception:  # noqa: BLE001, S110
             pass
     return {}
 
 
 def set_session(response: Response, data: dict):
+    secure = os.environ.get('SECURE_COOKIES', 'false').lower() == 'true'
     response.set_cookie(SESSION_COOKIE, serializer.dumps(data),
-                        httponly=True, samesite='lax')
+                        httponly=True, samesite='lax', secure=secure)
 
 
 def get_flashes(session_data: dict) -> list:
@@ -127,7 +131,7 @@ async def public_timeline(request: Request):
     msgs = [message_to_dict(m) for m in messages]
     flashes = get_flashes(session_data)
     db.close()
-    response = render('timeline.html', request,
+    response = render(TIMELINE_TEMPLATE, request,
                       messages=msgs, user=user, flashes=flashes)
     set_session(response, session_data)
     return response
@@ -152,7 +156,7 @@ async def timeline(request: Request):
     flashes = get_flashes(session_data)
     db.close()
     user_dict = {'user_id': user.user_id, 'username': user.username, 'email': user.email}
-    response = render('timeline.html', request,
+    response = render(TIMELINE_TEMPLATE, request,
                       messages=msgs, user=user_dict, flashes=flashes)
     set_session(response, session_data)
     return response
@@ -508,7 +512,7 @@ async def user_timeline(request: Request, username: str):
     user_dict = {'user_id': user.user_id, 'username': user.username,
                  'email': user.email} if user else None
     db.close()
-    response = render('timeline.html', request,
+    response = render(TIMELINE_TEMPLATE, request,
                       messages=msgs, user=user_dict,
                       profile_user=profile_dict, followed=followed, flashes=flashes)
     set_session(response, session_data)
