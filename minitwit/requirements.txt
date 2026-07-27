@@ -1,8 +1,6 @@
 # Session 02: FastAPI + Jinja2 (Python, not Flask)
 # Session 11: Upgraded to fix HIGH CVEs found by Docker Scout
 fastapi==0.140.7
-# Pin starlette to 1.3.1 to fix HIGH CVEs (CVE-2026-54283, CVE-2026-48818)
-starlette==1.3.1
 uvicorn[standard]==0.34.2
 jinja2==3.1.6
 python-multipart==0.0.30
