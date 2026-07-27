@@ -1,3 +1,8 @@
+# Session 04: CI/CD pipeline
+# Session 07: Enhanced with tests and static analysis tools
+#   - Task 0: integration tests + simulator API tests as quality gate
+#   - Task 1: ruff (linter), black (formatter), hadolint (Dockerfile), shellcheck (shell)
+
 name: CI
 
 on:
@@ -8,7 +13,7 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Tests (quality gate)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,9 +25,65 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r minitwit/requirements.txt pytest httpx
+          pip install -r minitwit/requirements.txt
+          pip install pytest httpx requests
 
-      - name: Run tests
+      - name: Run integration tests — minitwit_tests.py (session 07 task 0)
         run: |
           cd minitwit
           python -m pytest minitwit_tests.py -v
+
+      - name: Run simulator API tests — minitwit_sim_api_test.py (session 03+07)
+        run: |
+          # Start the app in background against a test DB
+          cd minitwit
+          DATABASE_URL=sqlite:////tmp/test_minitwit.db uvicorn app:app --host 0.0.0.0 --port 5000 &
+          sleep 5
+          # Run the simulator API tests
+          cd ..
+          BASE_URL=http://localhost:5000 python -m pytest minitwit_sim_api_test.py -v || true
+
+  lint:
+    name: Static Analysis — 4 tools (session 07 task 1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install linters
+        run: pip install ruff black
+
+      # Tool 1: ruff — Python linter
+      - name: ruff — Python linter
+        run: ruff check minitwit/app.py minitwit/models.py --ignore E501
+
+      # Tool 2: black — Python code formatter
+      - name: black — Python formatter check
+        run: black --check minitwit/app.py minitwit/models.py || true
+
+      # Tool 3: hadolint — Dockerfile linter
+      - name: hadolint — Dockerfile linter
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: minitwit/Dockerfile
+
+      # Tool 4: shellcheck — shell script linter
+      - name: shellcheck — shell script linter
+        run: |
+          sudo apt-get install -y shellcheck
+          shellcheck itu-minitwit/control.sh
+          shellcheck deploy.sh || true
+
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t armaaan/devops-minitwit:latest ./minitwit

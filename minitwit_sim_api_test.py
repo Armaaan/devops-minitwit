@@ -6,7 +6,8 @@ import json
 import base64
 import requests
 
-BASE_URL = 'http://46.101.179.118:5000'
+import os
+BASE_URL = os.environ.get('BASE_URL', 'http://46.101.179.118:5000')
 USERNAME = 'simulator'
 PWD = 'super_safe!'
 CREDENTIALS = ':'.join([USERNAME, PWD]).encode('ascii')
