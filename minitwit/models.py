@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     models.py
     ~~~~~~~~~
@@ -9,12 +8,9 @@
 """
 
 import os
-from datetime import datetime
 
-from sqlalchemy import (
-    create_engine, Column, Integer, String, ForeignKey, text
-)
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
+from sqlalchemy import Column, ForeignKey, Integer, String, create_engine
+from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:////data/minitwit.db')
 
