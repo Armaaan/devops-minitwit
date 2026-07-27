@@ -1,6 +1,8 @@
-# Session 06: Grafana datasources as code
-# Automatically provisioned on startup — no clicking required
 apiVersion: 1
+
+deleteDatasources:
+  - name: prometheus-1
+    orgId: 1
 
 datasources:
   - name: Prometheus
@@ -9,3 +11,5 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: false
+    jsonData:
+      httpMethod: POST

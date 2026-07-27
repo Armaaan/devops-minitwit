@@ -2,12 +2,10 @@
 # deploy.sh
 # Deploys ITU-MiniTwit with PostgreSQL + monitoring to the server.
 # Session 05 task 4: idempotent — safe to run multiple times.
+# Session 06: includes PostgreSQL + Prometheus + Grafana stack.
 #
 # Usage: ./deploy.sh
-# Run from your local machine — it copies files and deploys remotely.
-#
-# Required environment variables:
-#   SERVER_IP — IP address of the server (default: 46.101.179.118)
+# Run from your local machine.
 
 set -e
 
@@ -17,14 +15,12 @@ APP_DIR="/minitwit"
 
 echo "==> Deploying ITU-MiniTwit to $SERVER_IP..."
 
-# ── Copy monitoring config files to server ───────────────────────────────────
+# ── Copy configuration files to server ───────────────────────────────────────
 echo "==> Copying configuration files..."
-ssh "$SERVER_USER@$SERVER_IP" "mkdir -p $APP_DIR/monitoring/prometheus $APP_DIR/monitoring/grafana/provisioning/datasources $APP_DIR/monitoring/grafana/provisioning/dashboards $APP_DIR/monitoring/grafana/dashboards"
+ssh "$SERVER_USER@$SERVER_IP" "mkdir -p $APP_DIR/monitoring/prometheus $APP_DIR/monitoring/grafana/dashboards"
 
 scp remote_files/docker-compose.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/docker-compose.yml"
 scp monitoring/prometheus/prometheus.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/prometheus/prometheus.yml"
-scp monitoring/grafana/provisioning/datasources/datasources.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/grafana/provisioning/datasources/datasources.yml"
-scp monitoring/grafana/provisioning/dashboards/dashboards.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/grafana/provisioning/dashboards/dashboards.yml"
 scp monitoring/grafana/dashboards/minitwit.json "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/grafana/dashboards/minitwit.json"
 
 # ── Install Docker if not already installed (idempotent) ─────────────────────
@@ -58,10 +54,49 @@ docker compose pull
 docker compose up -d --remove-orphans
 docker image prune -f
 
+# ── Wait for Grafana to be ready ─────────────────────────────────────────────
+echo "==> Waiting for Grafana to start..."
+sleep 15
+
+# ── Import Grafana dashboard as code (session 06) ─────────────────────────────
+echo "==> Importing Grafana dashboard..."
+# Add Prometheus datasource if not exists
+curl -s -X POST http://admin:admin@localhost:3000/api/datasources \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Prometheus","type":"prometheus","url":"http://prometheus:9090","access":"proxy","isDefault":true}' \
+  2>/dev/null || true
+
+# Get datasource UID
+DS_UID=$(curl -s http://admin:admin@localhost:3000/api/datasources/name/Prometheus | python3 -c "import sys,json; print(json.load(sys.stdin).get('uid',''))" 2>/dev/null)
+
+# Update dashboard JSON with correct UID and import
+python3 -c "
+import json, sys
+with open('/minitwit/monitoring/grafana/dashboards/minitwit.json') as f:
+    d = json.load(f)
+
+def fix(obj, uid):
+    if isinstance(obj, dict):
+        if isinstance(obj.get('datasource'), dict):
+            obj['datasource']['uid'] = uid
+        if obj.get('type') == 'prometheus' and 'uid' in obj:
+            obj['uid'] = uid
+        for v in obj.values():
+            fix(v, uid)
+    elif isinstance(obj, list):
+        for i in obj:
+            fix(i, uid)
+
+fix(d, '$DS_UID')
+print(json.dumps(d))
+" | curl -s -X POST http://admin:admin@localhost:3000/api/dashboards/import \
+  -H "Content-Type: application/json" \
+  -d "{\"dashboard\": $(cat), \"overwrite\": true, \"folderId\": 0}" 2>/dev/null || true
+
 echo ""
 echo "✓ Deployment complete!"
-echo "  App:        http://$(curl -s ifconfig.me):5000"
-echo "  Grafana:    http://$(curl -s ifconfig.me):3000"
-echo "  Prometheus: http://$(curl -s ifconfig.me):9090"
+echo "  App:        http://$(curl -s ifconfig.me 2>/dev/null):5000"
+echo "  Grafana:    http://$(curl -s ifconfig.me 2>/dev/null):3000"
+echo "  Prometheus: http://$(curl -s ifconfig.me 2>/dev/null):9090"
 docker compose ps
 SSHEOF
