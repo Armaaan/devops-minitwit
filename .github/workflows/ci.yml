@@ -1,15 +1,14 @@
 # Session 04: CI/CD pipeline
 # Session 07: Enhanced with tests and static analysis tools
-#   - Task 0: integration tests + simulator API tests + UI/end-to-end tests as quality gate
-#   - Task 1: ruff (linter), black (formatter), hadolint (Dockerfile), shellcheck (shell)
+# Session 11: Enhanced with security scanning (Semgrep + Trivy)
 
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   test:
@@ -21,7 +20,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
@@ -33,7 +32,7 @@ jobs:
           cd minitwit
           python -m pytest minitwit_tests.py -v
 
-      - name: Run simulator API tests — minitwit_sim_api_test.py (session 03+07)
+      - name: Run simulator API tests (session 03+07)
         run: |
           cd minitwit
           DATABASE_URL=sqlite:////tmp/test_minitwit.db uvicorn app:app --host 0.0.0.0 --port 5000 &
@@ -50,7 +49,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Install Firefox and geckodriver
         run: |
@@ -58,7 +57,6 @@ jobs:
           wget -q https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
           tar -xzf geckodriver-v0.34.0-linux64.tar.gz
           sudo mv geckodriver /usr/local/bin/
-          geckodriver --version
 
       - name: Install dependencies
         run: |
@@ -86,7 +84,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Install linters
         run: pip install ruff black
@@ -107,6 +105,35 @@ jobs:
           sudo apt-get install -y shellcheck
           shellcheck itu-minitwit/control.sh
           shellcheck deploy.sh || true
+
+  security:
+    name: Security Scanning (session 11 task 2D)
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      # Tool 1: Semgrep — code security scanner
+      - name: Semgrep — security code scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/python
+            p/secrets
+            p/owasp-top-ten
+        continue-on-error: true
+
+      # Tool 2: Trivy — Docker image vulnerability scanner
+      - name: Build Docker image for scanning
+        run: docker build -t armaaan/devops-minitwit:scan ./minitwit
+
+      - name: Trivy — Docker image vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: armaaan/devops-minitwit:scan
+          format: table
+          exit-code: '0'
+          severity: CRITICAL,HIGH
 
   docker-build:
     name: Build Docker Image
