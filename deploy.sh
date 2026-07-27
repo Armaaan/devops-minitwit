@@ -1,8 +1,9 @@
 #!/bin/bash
 # deploy.sh
-# Deploys ITU-MiniTwit with PostgreSQL + monitoring to the server.
-# Session 05 task 4: idempotent — safe to run multiple times.
-# Session 06: includes PostgreSQL + Prometheus + Grafana stack.
+# Deploys ITU-MiniTwit with PostgreSQL + monitoring + logging to the server.
+# Session 05: idempotent — safe to run multiple times.
+# Session 06: adds PostgreSQL + Prometheus + Grafana.
+# Session 08: adds Loki + Promtail logging.
 #
 # Usage: ./deploy.sh
 # Run from your local machine.
@@ -17,11 +18,13 @@ echo "==> Deploying ITU-MiniTwit to $SERVER_IP..."
 
 # ── Copy configuration files to server ───────────────────────────────────────
 echo "==> Copying configuration files..."
-ssh "$SERVER_USER@$SERVER_IP" "mkdir -p $APP_DIR/monitoring/prometheus $APP_DIR/monitoring/grafana/dashboards"
+ssh "$SERVER_USER@$SERVER_IP" "mkdir -p $APP_DIR/monitoring/prometheus $APP_DIR/monitoring/grafana/dashboards $APP_DIR/monitoring/loki $APP_DIR/monitoring/promtail"
 
 scp remote_files/docker-compose.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/docker-compose.yml"
 scp monitoring/prometheus/prometheus.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/prometheus/prometheus.yml"
 scp monitoring/grafana/dashboards/minitwit.json "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/grafana/dashboards/minitwit.json"
+scp monitoring/loki/loki-config.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/loki/loki-config.yml"
+scp monitoring/promtail/promtail-config.yml "$SERVER_USER@$SERVER_IP:$APP_DIR/monitoring/promtail/promtail-config.yml"
 
 # ── Install Docker if not already installed (idempotent) ─────────────────────
 ssh "$SERVER_USER@$SERVER_IP" << 'SSHEOF'
@@ -56,20 +59,25 @@ docker image prune -f
 
 # ── Wait for Grafana to be ready ─────────────────────────────────────────────
 echo "==> Waiting for Grafana to start..."
-sleep 15
+sleep 20
 
-# ── Import Grafana dashboard as code (session 06) ─────────────────────────────
-echo "==> Importing Grafana dashboard..."
-# Add Prometheus datasource if not exists
+# ── Add Prometheus datasource if not exists ───────────────────────────────────
+echo "==> Configuring Grafana datasources..."
 curl -s -X POST http://admin:admin@localhost:3000/api/datasources \
   -H "Content-Type: application/json" \
   -d '{"name":"Prometheus","type":"prometheus","url":"http://prometheus:9090","access":"proxy","isDefault":true}' \
   2>/dev/null || true
 
-# Get datasource UID
+# ── Add Loki datasource ───────────────────────────────────────────────────────
+curl -s -X POST http://admin:admin@localhost:3000/api/datasources \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Loki","type":"loki","url":"http://loki:3100","access":"proxy","isDefault":false}' \
+  2>/dev/null || true
+
+# ── Import Grafana dashboard ──────────────────────────────────────────────────
+echo "==> Importing Grafana dashboard..."
 DS_UID=$(curl -s http://admin:admin@localhost:3000/api/datasources/name/Prometheus | python3 -c "import sys,json; print(json.load(sys.stdin).get('uid',''))" 2>/dev/null)
 
-# Update dashboard JSON with correct UID and import
 python3 -c "
 import json, sys
 with open('/minitwit/monitoring/grafana/dashboards/minitwit.json') as f:
@@ -79,8 +87,6 @@ def fix(obj, uid):
     if isinstance(obj, dict):
         if isinstance(obj.get('datasource'), dict):
             obj['datasource']['uid'] = uid
-        if obj.get('type') == 'prometheus' and 'uid' in obj:
-            obj['uid'] = uid
         for v in obj.values():
             fix(v, uid)
     elif isinstance(obj, list):
@@ -98,5 +104,6 @@ echo "✓ Deployment complete!"
 echo "  App:        http://$(curl -s ifconfig.me 2>/dev/null):5000"
 echo "  Grafana:    http://$(curl -s ifconfig.me 2>/dev/null):3000"
 echo "  Prometheus: http://$(curl -s ifconfig.me 2>/dev/null):9090"
+echo "  Loki:       http://$(curl -s ifconfig.me 2>/dev/null):3100"
 docker compose ps
 SSHEOF
