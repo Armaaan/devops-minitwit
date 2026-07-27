@@ -24,7 +24,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import Follower, Message, User, get_db, init_db
 
-
 # ─── Configuration ────────────────────────────────────────────────────────────
 PER_PAGE = 30
 SECRET_KEY = os.environ.get('SECRET_KEY', 'change-me-in-production')
