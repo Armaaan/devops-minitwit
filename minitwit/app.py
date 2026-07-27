@@ -19,9 +19,10 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer
-from models import Follower, Message, User, get_db, init_db
 from prometheus_fastapi_instrumentator import Instrumentator
 from werkzeug.security import check_password_hash, generate_password_hash
+
+from models import Follower, Message, User, get_db, init_db
 
 
 # ─── Configuration ────────────────────────────────────────────────────────────
