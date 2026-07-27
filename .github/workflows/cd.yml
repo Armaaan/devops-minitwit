@@ -8,7 +8,6 @@ jobs:
   deploy:
     name: Deploy to DigitalOcean
     runs-on: ubuntu-latest
-    needs: []
 
     steps:
       - uses: actions/checkout@v4
@@ -40,3 +39,16 @@ jobs:
             docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -f
+
+      - name: Create GitHub release automatically (session 04)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: deploy-${{ github.run_number }}
+          name: "Deployment #${{ github.run_number }}"
+          body: |
+            Automatic release from CD pipeline.
+            Commit: ${{ github.sha }}
+            Deployed to: http://${{ secrets.SSH_HOST }}:5000
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
