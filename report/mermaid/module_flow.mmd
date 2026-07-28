@@ -1,0 +1,15 @@
+%%{init: {"flowchart": {"htmlLabels": false}}}%%
+flowchart TD
+  Browser["Browser"] -->|HTML requests| WebRoutes
+  Simulator["Simulator"] -->|JSON + Basic Auth| SimAPI
+  subgraph app_py ["app.py — FastAPI application"]
+    WebRoutes["Web Routes\n/ · /public · /login\n/register · /logout\n/add_message\n/{username} follow/unfollow"]
+    SimAPI["Simulator API\nGET /latest\nPOST /register\nGET/POST /msgs\nGET/POST /fllws"]
+    Metrics["/metrics\nPrometheus endpoint"]
+  end
+  WebRoutes -->|SQLAlchemy session| ORM
+  SimAPI -->|SQLAlchemy session| ORM
+  subgraph models_py ["models.py — SQLAlchemy ORM (zero raw SQL)"]
+    ORM["User model\nMessage model\nFollower model"]
+  end
+  ORM --> PostgreSQL["PostgreSQL 16\nuser · message · follower tables"]

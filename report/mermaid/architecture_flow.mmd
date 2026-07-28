@@ -1,0 +1,24 @@
+%%{init: {"flowchart": {"htmlLabels": false}}}%%
+flowchart TD
+  Client["🌐 Browser / Simulator"] -->|HTTPS| Nginx["Nginx\nReverse Proxy\nLet's Encrypt TLS"]
+  Nginx -->|mini-twit.tech| App1["FastAPI replica 1\nport 5000"]
+  Nginx -->|mini-twit.tech| App2["FastAPI replica 2\nport 5000"]
+  Nginx -->|grafana.mini-twit.tech| Grafana["Grafana\nport 3000"]
+  App1 --> DB["PostgreSQL 16\nport 5432"]
+  App2 --> DB
+  App1 -->|/metrics| Prometheus["Prometheus\nport 9090"]
+  App2 -->|/metrics| Prometheus
+  NodeExp["Node Exporter\nport 9100"] -->|host metrics| Prometheus
+  Prometheus --> Grafana
+  Promtail["Promtail\nlog shipper"] -->|container logs| Loki["Loki\nport 3100"]
+  Loki --> Grafana
+  subgraph swarm ["Docker Swarm — DigitalOcean Frankfurt FRA1 · 2GB RAM"]
+    App1
+    App2
+    DB
+    Prometheus
+    Grafana
+    Loki
+    Promtail
+    NodeExp
+  end

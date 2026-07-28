@@ -1,0 +1,32 @@
+%%{init: {"flowchart": {"htmlLabels": false}}}%%
+flowchart LR
+  subgraph dev [Development]
+    A[Write code on branch] --> B[git push to main]
+  end
+  subgraph ci [CI Workflow]
+    B --> C[Integration tests\nminitwit_tests.py]
+    B --> D[Simulator API tests\nminitwit_sim_api_test.py]
+    B --> E[UI end-to-end tests\ntest_minitwit_ui.py]
+    B --> F[Static analysis\nruff · black · hadolint · shellcheck]
+    B --> G[Security scanning\nSemgrep · Trivy]
+    C --> H{All pass?}
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+    H -->|No| I[❌ Stop pipeline]
+    H -->|Yes| J[Docker image build]
+  end
+  subgraph cd [CD Workflow]
+    J --> K[Push to Docker Hub\n:latest + :sha]
+    K --> L[SSH to server\ndocker stack deploy]
+    L --> M[Rolling update\n2 replicas, start-first]
+    M --> N[Auto GitHub release\ndeploy-N tag]
+  end
+  subgraph prod [Production]
+    N --> O[mini-twit.tech\nFastAPI running]
+  end
+  subgraph quality [Code Quality - async]
+    B --> P[SonarCloud analysis]
+    B --> Q[Codacy analysis]
+  end

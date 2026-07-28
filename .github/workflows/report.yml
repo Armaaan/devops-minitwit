@@ -1,0 +1,44 @@
+# Builds the report from Markdown to PDF and stores it in report/build/
+name: Build Report
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "report/**"
+  workflow_dispatch:
+
+jobs:
+  build-report:
+    name: Build Report PDF
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pandoc and LaTeX
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y pandoc texlive-latex-recommended texlive-fonts-recommended librsvg2-bin
+
+      - name: Create build directory
+        run: mkdir -p report/build
+
+      - name: Build PDF from Markdown
+        run: |
+          pandoc report/report.md \
+            --pdf-engine=pdflatex \
+            -V geometry:margin=2.5cm \
+            -V fontsize=11pt \
+            -V papersize=a4 \
+            -o report/build/MSc_group_untitled.pdf
+
+      - name: Commit and push PDF
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add report/build/MSc_group_untitled.pdf
+          git diff --staged --quiet || git commit -m "Build report PDF [skip ci]"
+          git push
