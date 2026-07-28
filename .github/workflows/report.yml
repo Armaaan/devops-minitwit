@@ -31,6 +31,7 @@ jobs:
           pandoc report/MSc_group_arua.md \
             --pdf-engine=pdflatex \
             -V geometry:margin=2.5cm \
+            --resource-path=report \
             -V fontsize=11pt \
             -V papersize=a4 \
             -o report/build/MSc_group_arua.pdf
